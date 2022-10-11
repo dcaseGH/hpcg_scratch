@@ -13,7 +13,7 @@
 //@HEADER
 
 /*!
- @file CG.cpp
+ @file BiCG.cpp
 
  HPCG routine
  */
@@ -24,10 +24,9 @@
 
 #include "hpcg.hpp"
 
-#include "CG.hpp"
+#include "BiCG.hpp"
 #include "mytimer.hpp"
 #include "ComputeSPMV.hpp"
-#include "Compute9PtHorizontalStencil.hpp"
 #include "ComputeVSPM.hpp"
 #include "ComputeMG.hpp"
 #include "ComputeDotProduct.hpp"
@@ -58,13 +57,14 @@
 
   @see CG_ref()
 */
-int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
+int BiCG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
     const int max_iter, const double tolerance, int & niters, double & normr, double & normr0,
     double * times, bool doPreconditioning) {
 
   double t_begin = mytimer();  // Start timing right away
+  double rsnew = 0.0;
   normr = 0.0;
-  double rtz = 0.0, oldrtz = 0.0, alpha = 0.0, beta = 0.0, pAp = 0.0;
+  double rtz = 0.0, oldrtz = 0.0, alpha = 0.0, beta = 0.0, pAp = 0.0, rtz2 = 0.0;
 
 
   double t0 = 0.0, t1 = 0.0, t2 = 0.0, t3 = 0.0, t4 = 0.0, t5 = 0.0;
@@ -72,12 +72,18 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
 //  double t6 = 0.0;
 //#endif
   local_int_t nrow = A.localNumberOfRows;
-  Vector & r = data.r; // Residual vector
-  Vector & z = data.z; // Preconditioned residual vector
-  Vector & p = data.p; // Direction vector (in MPI mode ncol>=nrow)
-  Vector & Ap = data.Ap;
+  Vector & r   = data.r; // Residual vector
+  Vector & r2  = data.r2; // Residual vector
+  Vector & z   = data.z; // Preconditioned residual vector
+  Vector & z2  = data.z2; // Preconditioned residual vector
+  Vector & p   = data.p; // Direction vector (in MPI mode ncol>=nrow)
+  Vector & Ap  = data.Ap;
+  Vector & p2A = data.p2A;
+  Vector & p2  = data.p2;
+  Vector & x2  = data.x2;
 
   if (!doPreconditioning && A.geom->rank==0) HPCG_fout << "WARNING: PERFORMING UNPRECONDITIONED ITERATIONS" << std::endl;
+  if (doPreconditioning && A.geom->rank==0) HPCG_fout << "WARNING: HAVENT IMPLERMENTED PRECONDITIONING YET" << std::endl;
 
 #ifdef HPCG_DEBUG
   int print_freq = 1;
@@ -87,11 +93,15 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
   // p is of length ncols, copy x to p for sparse MV operation
 
   CopyVector(x, p);
+  CopyVector(x, p2);
+  CopyVector(x, x2); //x2 is in biCG
 
   TICK(); ComputeSPMV(A, p, Ap); TOCK(t3); // Ap = A*p
-//  TICK(); Compute9PtHorizontalStencil(A, p, Ap); TOCK(t3); // Ap = A*p
+  TICK(); ComputeVSPM(p2, A, p2A); TOCK(t3); // p2A = p2*A
   TICK(); ComputeWAXPBY(nrow, 1.0, b, -1.0, Ap, r, A.isWaxpbyOptimized);  TOCK(t2); // r = b - Ax (x stored in p)
+  TICK(); ComputeWAXPBY(nrow, 1.0, b, -1.0, p2A, r2, A.isWaxpbyOptimized);  TOCK(t2); // r2 = b - x2A (x stored in p)
   TICK(); ComputeDotProduct(nrow, r, r, normr, t4, A.isDotProductOptimized); TOCK(t1);
+  TICK(); ComputeDotProduct(nrow, r2, r, rsnew, t4, A.isDotProductOptimized); TOCK(t1);
   normr = sqrt(normr);
 #ifdef HPCG_DEBUG
   if (A.geom->rank==0) HPCG_fout << "Initial Residual = "<< normr << std::endl;
@@ -104,28 +114,46 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
 
   for (int k=1; k<=max_iter && normr/normr0 > tolerance; k++ ) {
     TICK();
-    if (doPreconditioning)
+    if (doPreconditioning){
       ComputeMG(A, r, z); // Apply preconditioner
-    else
+      exit(EXIT_FAILURE);}
+    else{
       CopyVector (r, z); // copy r to z (no preconditioning)
+      CopyVector (r2, z2);} // copy r2 to z2 (no preconditioning)
     TOCK(t5); // Preconditioner apply time
 
     if (k == 1) {
       TICK(); ComputeWAXPBY(nrow, 1.0, z, 0.0, z, p, A.isWaxpbyOptimized); TOCK(t2); // Copy Mr to p
-      TICK(); ComputeDotProduct (nrow, r, z, rtz, t4, A.isDotProductOptimized); TOCK(t1); // rtz = r'*z
-    } else {
+      TICK(); ComputeWAXPBY(nrow, 1.0, z2, 0.0, z2, p2, A.isWaxpbyOptimized); TOCK(t2); // Copy Mr 2 to p2
+      TICK(); ComputeDotProduct (nrow, r2, z, rtz, t4, A.isDotProductOptimized); TOCK(t1); // rtz = r'*z
+      TICK(); ComputeDotProduct (nrow, r, z, rtz2, t4, A.isDotProductOptimized); TOCK(t1); // rtz 2 = r'2*z2
+    }
+    else {
       oldrtz = rtz;
-      TICK(); ComputeDotProduct (nrow, r, z, rtz, t4, A.isDotProductOptimized); TOCK(t1); // rtz = r'*z
+//      TICK(); ComputeDotProduct (nrow, r, z, rtz, t4, A.isDotProductOptimized); TOCK(t1); // rtz = r'*z
+      TICK(); ComputeDotProduct (nrow, r2, z, rtz, t4, A.isDotProductOptimized); TOCK(t1); // rtz = r'*z
       beta = rtz/oldrtz;
       TICK(); ComputeWAXPBY (nrow, 1.0, z, beta, p, p, A.isWaxpbyOptimized);  TOCK(t2); // p = beta*p + z
+      TICK(); ComputeWAXPBY (nrow, 1.0, z2, beta, p2, p2, A.isWaxpbyOptimized);  TOCK(t2); // p = beta*p + z
     }
 
     TICK(); ComputeSPMV(A, p, Ap); TOCK(t3); // Ap = A*p
+    TICK(); ComputeVSPM(p2, A, p2A); TOCK(t3); // pA = p*A
     TICK(); ComputeDotProduct(nrow, p, Ap, pAp, t4, A.isDotProductOptimized); TOCK(t1); // alpha = p'*Ap
     alpha = rtz/pAp;
+    std::cout<< alpha << ' aphgdng ' << pAp << std::endl;//, p, Ap, r2,z,x)
+
+ //   print_vector(p, "p");
+//    print_vector(Ap, "Ap");
+//    print_vector(r2, "r2");
+//    print_vector(z, "z");
+ //   print_vector(x, "x");
     TICK(); ComputeWAXPBY(nrow, 1.0, x, alpha, p, x, A.isWaxpbyOptimized);// x = x + alpha*p
             ComputeWAXPBY(nrow, 1.0, r, -alpha, Ap, r, A.isWaxpbyOptimized);  TOCK(t2);// r = r - alpha*Ap
-    TICK(); ComputeDotProduct(nrow, r, r, normr, t4, A.isDotProductOptimized); TOCK(t1);
+    TICK(); ComputeWAXPBY(nrow, 1.0, x2, alpha, p2, x2, A.isWaxpbyOptimized);// x = x + alpha*p
+            ComputeWAXPBY(nrow, 1.0, r2, -alpha, p2A, r2, A.isWaxpbyOptimized);  TOCK(t2);// r = r - alpha*Ap
+    TICK(); ComputeDotProduct(nrow, r, r,  normr, t4, A.isDotProductOptimized); TOCK(t1);
+//    TICK(); ComputeDotProduct(nrow, r2, r, rsnew, t4, A.isDotProductOptimized); TOCK(t1);
     normr = sqrt(normr);
    std::cout << niters << " its " << normr << " norm" << std::endl;
 #ifdef HPCG_DEBUG

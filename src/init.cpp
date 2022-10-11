@@ -121,10 +121,10 @@ HPCG_Init(int * argc_p, char ** *argv_p, HPCG_Params & params) {
   params.nx = iparams[0];
   params.ny = iparams[1];
   params.nz = iparams[2];
-  std::cout << "OVERRIDING MIN DIM SIZE" <<std::endl;
+  /*std::cout << "OVERRIDING MIN DIM SIZE" <<std::endl;
   params.nx = 2;
   params.ny = 2;
-  params.nz = 1;
+  params.nz = 1;*/
 
   params.runningTime = iparams[3];
   params.pz = iparams[4];

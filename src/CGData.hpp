@@ -26,9 +26,14 @@
 
 struct CGData_STRUCT {
   Vector r; //!< pointer to residual vector
+  Vector r2; //!< pointer to residual vector
   Vector z; //!< pointer to preconditioned residual vector
+  Vector z2; //!< pointer to preconditioned residual vector
   Vector p; //!< pointer to direction vector
   Vector Ap; //!< pointer to Krylov vector
+  Vector x2; //!< pointer to spare x for biCG
+  Vector p2A; //!< pointer to transpose vector for biCG
+  Vector p2; //!< pointer to transpose vector for biCG
 };
 typedef struct CGData_STRUCT CGData;
 
@@ -42,9 +47,14 @@ inline void InitializeSparseCGData(SparseMatrix & A, CGData & data) {
   local_int_t nrow = A.localNumberOfRows;
   local_int_t ncol = A.localNumberOfColumns;
   InitializeVector(data.r, nrow);
+  InitializeVector(data.r2, ncol);
   InitializeVector(data.z, ncol);
+  InitializeVector(data.z2, nrow);
   InitializeVector(data.p, ncol);
   InitializeVector(data.Ap, nrow);
+  InitializeVector(data.x2, nrow); //check this stuff
+  InitializeVector(data.p2, nrow); //check this stuff
+  InitializeVector(data.p2A, ncol);
   return;
 }
 
@@ -56,9 +66,14 @@ inline void InitializeSparseCGData(SparseMatrix & A, CGData & data) {
 inline void DeleteCGData(CGData & data) {
 
   DeleteVector (data.r);
+  DeleteVector (data.r2);
   DeleteVector (data.z);
+  DeleteVector (data.z2);
   DeleteVector (data.p);
   DeleteVector (data.Ap);
+  DeleteVector (data.x2);
+  DeleteVector (data.p2);
+  DeleteVector (data.p2A);
   return;
 }
 

@@ -24,10 +24,11 @@
 
 #include "hpcg.hpp"
 
-#include "CG.hpp"
+#include "CG_stencil.hpp"
 #include "mytimer.hpp"
 #include "ComputeSPMV.hpp"
 #include "Compute9PtHorizontalStencil.hpp"
+#include "Compute27PtStencil.hpp"
 #include "ComputeVSPM.hpp"
 #include "ComputeMG.hpp"
 #include "ComputeDotProduct.hpp"
@@ -58,7 +59,7 @@
 
   @see CG_ref()
 */
-int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
+int CG_stencil(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
     const int max_iter, const double tolerance, int & niters, double & normr, double & normr0,
     double * times, bool doPreconditioning) {
 
@@ -88,8 +89,9 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
 
   CopyVector(x, p);
 
-  TICK(); ComputeSPMV(A, p, Ap); TOCK(t3); // Ap = A*p
+//  TICK(); ComputeSPMV(A, p, Ap); TOCK(t3); // Ap = A*p
 //  TICK(); Compute9PtHorizontalStencil(A, p, Ap); TOCK(t3); // Ap = A*p
+  TICK(); Compute27PtStencil(A, p, Ap); TOCK(t3); // Ap = A*p
   TICK(); ComputeWAXPBY(nrow, 1.0, b, -1.0, Ap, r, A.isWaxpbyOptimized);  TOCK(t2); // r = b - Ax (x stored in p)
   TICK(); ComputeDotProduct(nrow, r, r, normr, t4, A.isDotProductOptimized); TOCK(t1);
   normr = sqrt(normr);
@@ -120,7 +122,8 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
       TICK(); ComputeWAXPBY (nrow, 1.0, z, beta, p, p, A.isWaxpbyOptimized);  TOCK(t2); // p = beta*p + z
     }
 
-    TICK(); ComputeSPMV(A, p, Ap); TOCK(t3); // Ap = A*p
+//    TICK(); ComputeSPMV(A, p, Ap); TOCK(t3); // Ap = A*p
+    TICK(); Compute27PtStencil(A, p, Ap); TOCK(t3); // Ap = A*p
     TICK(); ComputeDotProduct(nrow, p, Ap, pAp, t4, A.isDotProductOptimized); TOCK(t1); // alpha = p'*Ap
     alpha = rtz/pAp;
     TICK(); ComputeWAXPBY(nrow, 1.0, x, alpha, p, x, A.isWaxpbyOptimized);// x = x + alpha*p
