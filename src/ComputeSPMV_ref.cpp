@@ -609,7 +609,7 @@ yv[ix+iy*nx+iz*ny*nx] = 26. * xv[ix+iy*nx+iz*ny*nx]
   if (nex*ney*nez == 0) return 0;
   //extras
   //corner becomes edge
-  if (ipx != npx)
+  if (ipx < npx -1)
   {
   ix = nx-1;
   iy = 0;
@@ -683,6 +683,114 @@ for (iy=1; iy<ny-1;iy++){
 }
 
 } //if
+
+  //corner becomes edge
+  if (ipx > 0)
+{
+  ix = 0;
+  iy = 0;
+  iz = 0;
+ yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal]
+-xv[nlocal+1*nex]
+-xv[nlocal+ney*nex]
+-xv[nlocal+1+ney*nex]
+;
+
+  iy = ny-1;
+  iz = 0;
+ yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal-2+2*ney*nex]
+-xv[nlocal-1+2*ney*nex]
+-xv[nlocal-2+ney*nex]
+-xv[nlocal-1+ney*nex]
+;
+
+  iy = 0;
+  iz = nz-1;
+ yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal+ iz*ney*nex]
+-xv[nlocal+1+iz*ney*nex]
+-xv[nlocal+(iz-1)*ney*nex]
+-xv[nlocal+1+(iz-1)*ney*nex]
+;
+
+  iy = ny-1;
+  iz = nz-1;
+ yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal+(iy)*nex+iz*nex*ney]
+-xv[nlocal+(iy-1)*nex+iz*nex*ney]
+-xv[nlocal+(iy)*nex+(iz-1)*nex*ney]
+-xv[nlocal+(iy-1)*nex+(iz-1)*nex*ney]
+;
+
+  //edge becomes face
+  iy = 0;
+for (iz=1; iz<nz-1;iz++){
+yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal+iy*nex+iz*(nex*ney)]
+-xv[nlocal+(iy+1)*nex+iz*(nex*ney)]
+-xv[nlocal+iy*nex+(iz+1)*(nex*ney)]
+-xv[nlocal+(iy+1)*nex+(iz+1)*(nex*ney)]
+-xv[nlocal+iy*nex+(iz-1)*(nex*ney)]
+-xv[nlocal+(iy+1)*nex+(iz-1)*(nex*ney)]
+;
+}
+  iy = ny-1;
+for (iz=1; iz<nz-1;iz++){
+yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal+iy*nex+iz*(nex*ney)]
+-xv[nlocal+(iy-1)*nex+iz*(nex*ney)]
+-xv[nlocal+iy*nex+(iz+1)*(nex*ney)]
+-xv[nlocal+(iy-1)*nex+(iz+1)*(nex*ney)]
+-xv[nlocal+iy*nex+(iz-1)*(nex*ney)]
+-xv[nlocal+(iy-1)*nex+(iz-1)*(nex*ney)]
+;
+}
+
+  iz = 0;
+for (iy=1; iy<ny-1;iy++){
+yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal+iy*nex-1]
+-xv[nlocal+iy*nex+1]
+-xv[nlocal+iy*nex]
+-xv[nlocal+iy*nex-1+nex*ney]
+-xv[nlocal+iy*nex+1+nex*ney]
+-xv[nlocal+iy*nex+nex*ney]
+;
+}
+  iz = nz-1;
+for (iy=1; iy<ny-1;iy++){
+yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal+iy*nex+iz*(nex*ney)]
+-xv[nlocal+iy*nex+(iz-1)*(nex*ney)]
+-xv[nlocal+(iy+1)*nex+iz*(nex*ney)]
+-xv[nlocal+(iy+1)*nex+(iz-1)*(nex*ney)]
+-xv[nlocal+(iy-1)*nex+iz*(nex*ney)]
+-xv[nlocal+(iy-1)*nex+(iz-1)*(nex*ney)]
+;
+}
+
+
+  //face becomes bulk
+for (iy=1; iy<ny-1;iy++){
+   for (iz=1; iz<nz-1;iz++){
+    yv[ix+iy*nx+iz*ny*nx] +=
+-xv[nlocal+iy*nex+iz*nex*ney]
+-xv[nlocal+(1+iy)*nex+iz*nex*ney]
+-xv[nlocal+(-1+iy)*nex+iz*nex*ney]
+-xv[nlocal+iy*nex+(1+iz)*nex*ney]
+-xv[nlocal+(1+iy)*nex+(1+iz)*nex*ney]
+-xv[nlocal+(-1+iy)*nex+(1+iz)*nex*ney]
+-xv[nlocal+iy*nex+(-1+iz)*nex*ney]
+-xv[nlocal+(1+iy)*nex+(-1+iz)*nex*ney]
+-xv[nlocal+(-1+iy)*nex+(-1+iz)*nex*ney]
+;
+   }
+}
+
+
+}
   return 0;
 }
 
