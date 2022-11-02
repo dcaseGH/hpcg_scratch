@@ -23,6 +23,7 @@
 #endif
 #include "ComputeSYMGS_ref.hpp"
 #include <cassert>
+#include <iostream>
 
 /*!
   Computes one step of symmetric Gauss-Seidel:
@@ -59,46 +60,856 @@ int ComputeSYMGS_ref( const SparseMatrix & A, const Vector & r, Vector & x) {
   ExchangeHalo(A,x);
 #endif
 
-  const local_int_t nrow = A.localNumberOfRows;
-  double ** matrixDiagonal = A.matrixDiagonal;  // An array of pointers to the diagonal entries A.matrixValues
+  local_int_t ix = 0;
+  local_int_t iy = 0;
+  local_int_t iz = 0;
+  local_int_t nex = 0;
+  local_int_t ney = 0;
+  local_int_t nez = 0;
+  local_int_t nx = A.geom->nx;
+  local_int_t ny = A.geom->ny;
+  local_int_t nz = A.geom->nz;
+  local_int_t nlocal = nx*ny*nz;
+  int npx          = A.geom->npx;
+  int npy          = A.geom->npy;
+  int npz          = A.geom->npz;
+  int ipx          = A.geom->ipx;
+  int ipy          = A.geom->ipy;
+  int ipz          = A.geom->ipz;
+
+//  const local_int_t nrow = A.localNumberOfRows;
+//  double ** matrixDiagonal = A.matrixDiagonal;  // An array of pointers to the diagonal entries A.matrixValues
   const double * const rv = r.values;
   double * const xv = x.values;
 
-  for (local_int_t i=0; i< nrow; i++) {
-    const double * const currentValues = A.matrixValues[i];
-    const local_int_t * const currentColIndices = A.mtxIndL[i];
-    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-    const double  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
-    double sum = rv[i]; // RHS value
+// forward sweep
+for( iz=0; iz< nz; iz++){
+    for( iy=0; iy< ny; iy++){
+        for (ix=0; ix < nx; ix++){
 
-    for (int j=0; j< currentNumberOfNonzeros; j++) {
-      local_int_t curCol = currentColIndices[j];
-      sum -= currentValues[j] * xv[curCol];
+if(ix == 0&& iy == 0&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == 0&& iy == 0&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if(ix == 0&& iy == ny-1&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == 0&& iy == ny-1&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == 0&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == 0&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == ny-1&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == ny-1&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
+)/26.;}
+
+//edges
+else if (ix == 0 && iy == 0 &&iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iy == ny-1 &&iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iy == 0 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iy == ny-1 &&iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iz == 0 &&iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iz == nz-1 &&iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iz == 0 && iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iz == nz-1 &&iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (iy == 0 && iz == 0 &&ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iy == 0 && iz == nz-1 &&ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (iy == ny-1 && iz == 0 && ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iy == ny-1 && iz == nz-1 &&ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
+)/26.;}
+
+//sides
+else if (iz == 0 && ix>0 && ix<nx-1 && iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iz == nz-1 && ix>0 && ix<nx-1 && iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (iy == 0 && ix>0 && ix<nx-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iy == ny-1 && ix>0 && ix<nx-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iy>0 && iy<ny-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iy>0 && iy<ny-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+
+//bulk
+else{
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++ xv[ix+-1 + (iy+-1)*nx + (iz+-1)*nx*ny]
++ xv[ix+-1 + (iy+-1)*nx + (iz+0)*nx*ny]
++ xv[ix+-1 + (iy+-1)*nx + (iz+1)*nx*ny]
++ xv[ix+-1 + (iy+0)*nx + (iz+-1)*nx*ny]
++ xv[ix+-1 + (iy+0)*nx + (iz+0)*nx*ny]
++ xv[ix+-1 + (iy+0)*nx + (iz+1)*nx*ny]
++ xv[ix+-1 + (iy+1)*nx + (iz+-1)*nx*ny]
++ xv[ix+-1 + (iy+1)*nx + (iz+0)*nx*ny]
++ xv[ix+-1 + (iy+1)*nx + (iz+1)*nx*ny]
++ xv[ix+0 + (iy+-1)*nx + (iz+-1)*nx*ny]
++ xv[ix+0 + (iy+-1)*nx + (iz+0)*nx*ny]
++ xv[ix+0 + (iy+-1)*nx + (iz+1)*nx*ny]
++ xv[ix+0 + (iy+0)*nx + (iz+-1)*nx*ny]
++ xv[ix+0 + (iy+0)*nx + (iz+1)*nx*ny]
++ xv[ix+0 + (iy+1)*nx + (iz+-1)*nx*ny]
++ xv[ix+0 + (iy+1)*nx + (iz+0)*nx*ny]
++ xv[ix+0 + (iy+1)*nx + (iz+1)*nx*ny]
++ xv[ix+1 + (iy+-1)*nx + (iz+-1)*nx*ny]
++ xv[ix+1 + (iy+-1)*nx + (iz+0)*nx*ny]
++ xv[ix+1 + (iy+-1)*nx + (iz+1)*nx*ny]
++ xv[ix+1 + (iy+0)*nx + (iz+-1)*nx*ny]
++ xv[ix+1 + (iy+0)*nx + (iz+0)*nx*ny]
++ xv[ix+1 + (iy+0)*nx + (iz+1)*nx*ny]
++ xv[ix+1 + (iy+1)*nx + (iz+-1)*nx*ny]
++ xv[ix+1 + (iy+1)*nx + (iz+0)*nx*ny]
++ xv[ix+1 + (iy+1)*nx + (iz+1)*nx*ny]
+)/26.;}
+
+
+        }
+      }
     }
-    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 
-    xv[i] = sum/currentDiagonal;
+// barwards sweep
+for( iz=nz-1; iz>=0; iz--){
+    for( iy=ny-1; iy>=0; iy--){
+        for (ix=nx-1; ix>=0; ix--){
 
-  }
+if(ix == 0&& iy == 0&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == 0&& iy == 0&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if(ix == 0&& iy == ny-1&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == 0&& iy == ny-1&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == 0&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == 0&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == ny-1&& iz == 0){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if(ix == nx-1&& iy == ny-1&& iz == nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
+)/26.;}
 
-  // Now the back sweep.
+//edges
+else if (ix == 0 && iy == 0 &&iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iy == ny-1 &&iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iy == 0 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iy == ny-1 &&iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iz == 0 &&iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iz == nz-1 &&iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iz == 0 && iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iz == nz-1 &&iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (iy == 0 && iz == 0 &&ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iy == 0 && iz == nz-1 &&ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (iy == ny-1 && iz == 0 && ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iy == ny-1 && iz == nz-1 &&ix>0 && ix<nx-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
+)/26.;}
 
-  for (local_int_t i=nrow-1; i>=0; i--) {
-    const double * const currentValues = A.matrixValues[i];
-    const local_int_t * const currentColIndices = A.mtxIndL[i];
-    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-    const double  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
-    double sum = rv[i]; // RHS value
+//sides
+else if (iz == 0 && ix>0 && ix<nx-1 && iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iz == nz-1 && ix>0 && ix<nx-1 && iy>0 && iy<ny-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
+)/26.;}
+else if (iy == 0 && ix>0 && ix<nx-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (iy == ny-1 && ix>0 && ix<nx-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == 0 && iy>0 && iy<ny-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+1)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
+else if (ix == nx-1 && iy>0 && iy<ny-1 && iz>0 && iz<nz-1){
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+-1)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+0)*nx+(iz+1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+-1)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+0)*ny*nx]
++xv[(ix+-1)+(iy+1)*nx+(iz+1)*ny*nx]
++xv[(ix+0)+(iy+1)*nx+(iz+1)*ny*nx]
+)/26.;}
 
-    for (int j = 0; j< currentNumberOfNonzeros; j++) {
-      local_int_t curCol = currentColIndices[j];
-      sum -= currentValues[j]*xv[curCol];
+//bulk
+else{
+xv[ix+iy*nx+iz*ny*nx] = (rv[ix+iy*nx+iz*ny*nx]
++ xv[ix+-1 + (iy+-1)*nx + (iz+-1)*nx*ny]
++ xv[ix+-1 + (iy+-1)*nx + (iz+0)*nx*ny]
++ xv[ix+-1 + (iy+-1)*nx + (iz+1)*nx*ny]
++ xv[ix+-1 + (iy+0)*nx + (iz+-1)*nx*ny]
++ xv[ix+-1 + (iy+0)*nx + (iz+0)*nx*ny]
++ xv[ix+-1 + (iy+0)*nx + (iz+1)*nx*ny]
++ xv[ix+-1 + (iy+1)*nx + (iz+-1)*nx*ny]
++ xv[ix+-1 + (iy+1)*nx + (iz+0)*nx*ny]
++ xv[ix+-1 + (iy+1)*nx + (iz+1)*nx*ny]
++ xv[ix+0 + (iy+-1)*nx + (iz+-1)*nx*ny]
++ xv[ix+0 + (iy+-1)*nx + (iz+0)*nx*ny]
++ xv[ix+0 + (iy+-1)*nx + (iz+1)*nx*ny]
++ xv[ix+0 + (iy+0)*nx + (iz+-1)*nx*ny]
++ xv[ix+0 + (iy+0)*nx + (iz+1)*nx*ny]
++ xv[ix+0 + (iy+1)*nx + (iz+-1)*nx*ny]
++ xv[ix+0 + (iy+1)*nx + (iz+0)*nx*ny]
++ xv[ix+0 + (iy+1)*nx + (iz+1)*nx*ny]
++ xv[ix+1 + (iy+-1)*nx + (iz+-1)*nx*ny]
++ xv[ix+1 + (iy+-1)*nx + (iz+0)*nx*ny]
++ xv[ix+1 + (iy+-1)*nx + (iz+1)*nx*ny]
++ xv[ix+1 + (iy+0)*nx + (iz+-1)*nx*ny]
++ xv[ix+1 + (iy+0)*nx + (iz+0)*nx*ny]
++ xv[ix+1 + (iy+0)*nx + (iz+1)*nx*ny]
++ xv[ix+1 + (iy+1)*nx + (iz+-1)*nx*ny]
++ xv[ix+1 + (iy+1)*nx + (iz+0)*nx*ny]
++ xv[ix+1 + (iy+1)*nx + (iz+1)*nx*ny]
+)/26.;}
+
+
+        }
+      }
     }
-    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 
-    xv[i] = sum/currentDiagonal;
-  }
 
-  return 0;
+return 0;
 }
-
